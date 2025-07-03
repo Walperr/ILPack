@@ -14,7 +14,8 @@ namespace TestSubject
         [MyAttribute(
             10, 20, 30, 
             Named = "ILPack", 
-            NamedArray = new int[] { 40, 50, 60 } 
+            NamedArray = new int[] { 40, 50, 60 },
+            NamedObject = new object[] { 1d, 2 }
             )]
         public void AttributeArrayTest()
         {
@@ -39,6 +40,11 @@ namespace TestSubject
 
         [MyArrayAttribute(new string[] { null })]
         public void AttributeNullArrayValueTest()
+        {
+        }
+
+        [MyObjectArrayAttribute(new object[] { 1, 2.3f, "string", new [] { 4 } })]
+        public void AttributeObjectArrayValueTest()
         {
         }
     }

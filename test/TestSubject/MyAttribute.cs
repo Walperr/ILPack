@@ -14,5 +14,7 @@ namespace TestSubject
         public string Named { get; set; }
 
         public int[] NamedArray { get; set; }
+        
+        public object NamedObject { get; set; }
     }   
 }

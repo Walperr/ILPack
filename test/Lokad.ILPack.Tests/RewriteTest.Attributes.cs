@@ -62,6 +62,15 @@ namespace Lokad.ILPack.Tests
         }
 
         [Fact]
+        public async void AttributeNamedObjectValues()
+        {
+            Assert.Equal(new object[] { 1d, 2 }, await Invoke(
+                $"var attr = typeof({_namespaceName}.MyClass).GetMethod(\"AttributeArrayTest\").GetCustomAttribute<MyAttribute>();",
+                "attr.NamedObject"
+            ));
+        }
+
+        [Fact]
         public async void AttributeNullString()
         {
             Assert.Null(
@@ -86,6 +95,16 @@ namespace Lokad.ILPack.Tests
                 new object[] { null },
                 await Invoke(
                     $"var attr = typeof({_namespaceName}.MyClass).GetMethod(\"AttributeNullArrayValueTest\").GetCustomAttribute<MyArrayAttribute>();",
+                    "attr.Values"));
+        }
+
+        [Fact]
+        public async void AttributeObjectArrayValue()
+        {
+            Assert.Equal(
+                new object[] { 1, 2.3f, "string", new [] { 4 } },
+                await Invoke(
+                    $"var attr = typeof({_namespaceName}.MyClass).GetMethod(\"AttributeObjectArrayValueTest\").GetCustomAttribute<MyObjectArrayAttribute>();",
                     "attr.Values"));
         }
     }

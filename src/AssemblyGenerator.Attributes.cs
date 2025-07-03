@@ -50,7 +50,7 @@ namespace Lokad.ILPack
             }
         }
 
-        static void EncodeLiteral(LiteralEncoder litEnc, CustomAttributeTypedArgument arg)
+        static void EncodeLiteral(LiteralEncoder litEnc, CustomAttributeTypedArgument arg, bool isObject)
         {
             if (arg.Value is Type type)
             {
@@ -60,10 +60,27 @@ namespace Lokad.ILPack
             else if (arg.Value is ReadOnlyCollection<CustomAttributeTypedArgument> array)
             {
                 // Array of values
-                var subLitEnc = litEnc.Vector().Count(array.Count);
+                var isObjectsArray = arg.ArgumentType == typeof(object[]);
+                
+                VectorEncoder vectorEncoder;
+                if (isObject)
+                {
+                    litEnc.TaggedVector(out var typeEncoder, out vectorEncoder);
+                    
+                    if (isObjectsArray)
+                        typeEncoder.ObjectArray();
+                    else
+                        EncodeType(typeEncoder.ElementType(), arg.ArgumentType.GetElementType());
+                }
+                else
+                {
+                    vectorEncoder = litEnc.Vector();
+                }
+
+                var subLitEnc = vectorEncoder.Count(array.Count);
                 foreach (var el in array)
                 {
-                    EncodeLiteral(subLitEnc.AddLiteral(), el);
+                    EncodeLiteral(subLitEnc.AddLiteral(), el, isObjectsArray);
                 }
             }
             else if (arg.Value is null)
@@ -79,9 +96,21 @@ namespace Lokad.ILPack
             }
             else
             {
-                // Check argument type supported (ie: simple scalar values)
-                PrimitiveTypeCodeFromSystemTypeCode(arg.Value.GetType());
-                litEnc.Scalar().Constant(arg.Value);
+                ScalarEncoder scalarEncoder;
+                if (isObject)
+                {
+                    litEnc.TaggedScalar(out var typeEncoder, out scalarEncoder);
+                    EncodeType(typeEncoder, arg.Value.GetType());
+                }
+                else
+                {
+                    scalarEncoder = litEnc.Scalar();
+                    
+                    // Check argument type supported (ie: simple scalar values)
+                    PrimitiveTypeCodeFromSystemTypeCode(arg.Value.GetType());
+                }
+
+                scalarEncoder.Constant(arg.Value);
             }
         }
 
@@ -105,9 +134,17 @@ namespace Lokad.ILPack
             {
                 typeEnc.ScalarType().SystemType();
             }
+            else if (type == typeof(object[]))
+            {
+                typeEnc.SZArray().ObjectArray();
+            }
             else if (type.IsArray)
             {
                 EncodeType(typeEnc.SZArray().ElementType(), type.GetElementType());
+            }
+            else if (type == typeof(object))
+            {
+                typeEnc.Object();
             }
             else
             {
@@ -122,7 +159,7 @@ namespace Lokad.ILPack
             var args = attr.ConstructorArguments;
             foreach (var a in args)
             {
-                EncodeLiteral(fa.AddArgument(), a);
+                EncodeLiteral(fa.AddArgument(), a, a.ArgumentType == typeof(object));
             }
         }
 
@@ -133,10 +170,11 @@ namespace Lokad.ILPack
             foreach (var a in args)
             {
                 // Encode it
+                var type = a.IsField ? ((FieldInfo)a.MemberInfo).FieldType : ((PropertyInfo)a.MemberInfo).PropertyType;
                 enc.AddArgument(a.IsField, out var typeEnc, out var nameEnc, out var litEnc);
-                EncodeType(typeEnc, a.TypedValue.ArgumentType);
+                EncodeType(typeEnc, type);
                 nameEnc.Name(a.MemberName);
-                EncodeLiteral(litEnc, a.TypedValue);
+                EncodeLiteral(litEnc, a.TypedValue, type == typeof(object));
             }
         }
 
